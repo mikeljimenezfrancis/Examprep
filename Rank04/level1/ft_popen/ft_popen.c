@@ -4,18 +4,17 @@
 
 int ft_popen(const char *file, char *const argv[], char type)
 {
+    if (!file || !argv || (type != 'r' && type != 'w'))
+        return(-1);
     int read_end;
     int write_end;
     int fd[2];
     pid_t pid;
 
-    if(!file || !argv || (type != 'r' && type != 'w'))
-        return(-1);
     if (pipe(fd) == -1)
         return(-1);
     read_end = fd[0];
     write_end = fd[1];
-    pid = fork();
     if (pid == -1)
     {
         close(read_end);
