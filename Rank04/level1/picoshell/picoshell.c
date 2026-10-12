@@ -7,30 +7,20 @@
 
 int picoshell(char **cmds[])
 {
-	if (!cmds)
+	if (!cmds[0] || !cmds)
 		return(1);
-	if (cmds[0][0] == NULL || cmds[0] == NULL)
-		return(0);
 	int prev_fd = -1;
 	int i = 0;
-	int exit_code = 0;
-	int status;
 	int fd[2];
 	pid_t pid;
 
 	while (cmds[i])
 	{
 		if (cmds[i + 1] && pipe(fd) == -1)
-		{
-			if (prev_fd != -1)
-				close(prev_fd);
 			return(1);
-		}
 		pid = fork();
 		if (pid == -1)
 		{
-			if (prev_fd != -1)
-				close(prev_fd);
 			if (cmds[i + 1])
 			{
 				close(fd[0]);
@@ -40,19 +30,19 @@ int picoshell(char **cmds[])
 		}
 		if (pid == 0)
 		{
-			if (cmds[i + 1])
-			{
-				dup2(fd[1], 1);
-				close(fd[0]);
-				close(fd[1]);
-			}
 			if (prev_fd != -1)
 			{
-				dup2(prev_fd, 0);
+				if(dup2(prev_fd, STDIN_FILENO) == -1)
+					exit(1);
 				close(prev_fd);
 			}
-			if (!cmds[i][0])
-				exit(1);
+			if (cmds[i + 1])
+			{
+				close(fd[0]);
+				if (dup2(fd[1], STDOUT_FILENO) == -1)
+					exit(1);
+				close(fd[1]);
+			}
 			execvp(cmds[i][0], cmds[i]);
 			exit(1);
 		}
@@ -65,14 +55,9 @@ int picoshell(char **cmds[])
 		}
 		i++;
 	}
-	while (wait(&status) == -1)
-	{
-		if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-			exit_code = 1;
-		if (WIFSIGNALED(status))
-			exit_code = 1;
-	}
-	return(exit_code);
+	while(wait(NULL) > 0)
+		;
+	return(0);
 }
 
 int	main(int argc, char **argv)
@@ -104,4 +89,3 @@ int	main(int argc, char **argv)
 	free(cmds);
 	return (ret);
 }
-
